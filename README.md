@@ -38,6 +38,7 @@ Aplikasi web voting untuk pemilihan pegawai teladan Badan Pusat Statistik (BPS) 
 ## Setup Instructions
 
 ### 1. Install Dependencies
+
 ```bash
 npm install
 ```
@@ -45,10 +46,12 @@ npm install
 ### 2. Setup NeonDB Database
 
 1. **Create NeonDB Account**
+
    - Visit [Neon.tech](https://neon.tech) and create a free account
    - Create a new project and database
 
 2. **Get Database Connection String**
+
    - In your Neon dashboard, click "Connect"
    - Copy the PostgreSQL connection string
 
@@ -57,24 +60,27 @@ npm install
    - Add your NeonDB connection string:
    ```env
    DATABASE_URL="postgresql://username:password@endpoint.neon.tech:5432/dbname?sslmode=require"
-   ADMIN_PASSWORD="Admin3173"
+   ADMIN_PASSWORD="xxxxxxxxxxxx"
    NEXT_PUBLIC_APP_URL="http://localhost:3000"
    ```
 
 ### 3. Initialize Database
+
 - The application will automatically create necessary tables on first run
 - Database includes tables for: `voters`, `votes`, and `voting_sessions`
 
 ### 4. Start Development Server
+
 ```bash
 npm run dev
 ```
 
 ### 5. Access Application
+
 - Open browser and navigate to `http://localhost:3000`
 - Start voting by entering your name and email
 - Complete the voting process for all candidates
-- View results using admin password: `Admin3173`
+- View results using admin password: `xxxxxxxxxx`
 
 ## Alur Penggunaan
 
@@ -83,7 +89,7 @@ npm run dev
 3. Masukkan nama dan email
 4. Berikan penilaian untuk semua kandidat (skala 1-5)
 5. Submit hasil voting
-6. Lihat hasil dengan password "Admin3173"
+6. Lihat hasil dengan password "xxxxxxxxxx"
 
 ## Teknologi yang Digunakan
 
@@ -117,9 +123,10 @@ polly/
 
 ## Password Admin
 
-Untuk mengakses halaman hasil voting, gunakan password: **Admin3173**
+Untuk mengakses halaman hasil voting, gunakan password: **xxxxxxxxxx**
 
 ### Fitur Admin:
+
 - Melihat hasil voting lengkap dan statistik
 - Ranking kandidat real-time dengan kalkulasi berbasis database
 - Statistik voting (vote lengkap vs parsial)
@@ -131,9 +138,11 @@ Untuk mengakses halaman hasil voting, gunakan password: **Admin3173**
 ### Tabel yang Dibuat Otomatis:
 
 1. **voters**: Menyimpan informasi pemilih
+
    - id, name, email, created_at, updated_at
 
 2. **votes**: Menyimpan vote individual kandidat
+
    - id, voter_email, candidate_id, aspect_scores (JSON), is_abstained, is_partial, created_at, updated_at
 
 3. **voting_sessions**: Menyimpan metadata sesi voting
@@ -148,7 +157,7 @@ Variabel environment yang diperlukan dalam file `.env`:
 DATABASE_URL="postgresql://username:password@endpoint.neon.tech:5432/dbname?sslmode=require"
 
 # Konfigurasi Admin
-ADMIN_PASSWORD="Admin3173"
+ADMIN_PASSWORD="xxxxxxxxxxxxxxxxxxx"
 
 # URL Aplikasi
 NEXT_PUBLIC_APP_URL="http://localhost:3000"

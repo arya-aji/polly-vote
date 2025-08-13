@@ -16,7 +16,7 @@ export default function Results() {
   const [partialVotes, setPartialVotes] = useState(0);
   const router = useRouter();
 
-  const ADMIN_PASSWORD = "Admin3173";
+  const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -55,7 +55,7 @@ export default function Results() {
 
       // Process candidate statistics
       const processedResults = [];
-      
+
       // Process each candidate sequentially with await
       for (const stat of data.candidateStats) {
         // Find candidate info from our candidates data
@@ -65,59 +65,69 @@ export default function Results() {
           name: stat.candidate_id,
           district: "Unknown",
         };
-        
+
         // Calculate average aspect scores if available
         let aspectScores = {};
-        
+
         // Initialize aspect scores with default values
-        aspects.forEach(aspect => {
+        aspects.forEach((aspect) => {
           aspectScores[aspect.name] = "N/A";
         });
-        
+
         // Try to get aspect scores from votes
         try {
           // Get votes for this candidate
-          const candidateVotes = await fetch(`/api/votes?action=candidateVotes&candidateId=${stat.candidate_id}`);
-           const votesData = await candidateVotes.json();
-           
-           // Ensure votesData is an array
-           const votesArray = Array.isArray(votesData) ? votesData : [];
-           
-           if (votesArray.length > 0) {
+          const candidateVotes = await fetch(
+            `/api/votes?action=candidateVotes&candidateId=${stat.candidate_id}`
+          );
+          const votesData = await candidateVotes.json();
+
+          // Ensure votesData is an array
+          const votesArray = Array.isArray(votesData) ? votesData : [];
+
+          if (votesArray.length > 0) {
             // Group votes by voter_email, keeping only the latest
             const latestVotes = {};
-            
-            votesArray.forEach(vote => {
-               if (vote && !vote.is_abstained && vote.aspect_scores) {
-                 const key = vote.voter_email;
-                 if (!latestVotes[key] || new Date(vote.updated_at) > new Date(latestVotes[key].updated_at)) {
-                   latestVotes[key] = vote;
-                 }
-               }
-             });
-            
+
+            votesArray.forEach((vote) => {
+              if (vote && !vote.is_abstained && vote.aspect_scores) {
+                const key = vote.voter_email;
+                if (
+                  !latestVotes[key] ||
+                  new Date(vote.updated_at) >
+                    new Date(latestVotes[key].updated_at)
+                ) {
+                  latestVotes[key] = vote;
+                }
+              }
+            });
+
             // Calculate average scores from latest votes
             const validVotes = Object.values(latestVotes);
-            
+
             if (validVotes.length > 0) {
               // Initialize counters for each aspect
               const aspectTotals = {};
               const aspectVoterCounts = {};
-              
+
               // Initialize counters
-              aspects.forEach(aspect => {
+              aspects.forEach((aspect) => {
                 aspectTotals[aspect.name] = 0;
                 aspectVoterCounts[aspect.name] = 0;
               });
-              
+
               // Sum up scores for each aspect
-              validVotes.forEach(vote => {
+              validVotes.forEach((vote) => {
                 if (vote.aspect_scores) {
-                  Object.keys(vote.aspect_scores).forEach(aspectKey => {
+                  Object.keys(vote.aspect_scores).forEach((aspectKey) => {
                     // Map aspect keys from database to aspect names in our config
-                    const matchingAspect = aspects.find(a => a.name.toLowerCase() === aspectKey.toLowerCase());
+                    const matchingAspect = aspects.find(
+                      (a) => a.name.toLowerCase() === aspectKey.toLowerCase()
+                    );
                     if (matchingAspect) {
-                      const score = parseFloat(vote.aspect_scores[aspectKey] || 0);
+                      const score = parseFloat(
+                        vote.aspect_scores[aspectKey] || 0
+                      );
                       // Only count non-zero scores (not abstained)
                       if (score > 0) {
                         aspectTotals[matchingAspect.name] += score;
@@ -127,12 +137,15 @@ export default function Results() {
                   });
                 }
               });
-              
+
               // Calculate averages, only dividing by non-abstained voters
-              Object.keys(aspectTotals).forEach(aspect => {
-                aspectScores[aspect] = aspectVoterCounts[aspect] > 0 
-                  ? (aspectTotals[aspect] / aspectVoterCounts[aspect]).toFixed(2)
-                  : "N/A";
+              Object.keys(aspectTotals).forEach((aspect) => {
+                aspectScores[aspect] =
+                  aspectVoterCounts[aspect] > 0
+                    ? (
+                        aspectTotals[aspect] / aspectVoterCounts[aspect]
+                      ).toFixed(2)
+                    : "N/A";
               });
             }
           }
@@ -148,7 +161,7 @@ export default function Results() {
           averageScore: stat.average_score
             ? parseFloat(stat.average_score).toFixed(2)
             : "0.00",
-          aspectScores: aspectScores
+          aspectScores: aspectScores,
         });
       }
 
@@ -492,8 +505,11 @@ export default function Results() {
                           </div>
                         </td>
                         {aspects.map((aspect) => (
-                          <td key={aspect.name} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {candidate.aspectScores[aspect.name] || 'N/A'}
+                          <td
+                            key={aspect.name}
+                            className="px-6 py-4 whitespace-nowrap text-sm text-gray-900"
+                          >
+                            {candidate.aspectScores[aspect.name] || "N/A"}
                           </td>
                         ))}
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
