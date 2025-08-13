@@ -16,7 +16,7 @@ export default function Results() {
   const [partialVotes, setPartialVotes] = useState(0);
   const router = useRouter();
 
-  const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "Admin3173";
+  const ADMIN_PASSWORD = "Admin3173";
 
   useEffect(() => {
     if (isAuthenticated) {
