@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { districts, aspects, getAllCandidates } from "../data/candidates";
+import Modal from "../components/Modal";
 
 export default function Results() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -14,6 +15,10 @@ export default function Results() {
   const [totalVoters, setTotalVoters] = useState(0);
   const [completeVotes, setCompleteVotes] = useState(0);
   const [partialVotes, setPartialVotes] = useState(0);
+  const [selectedCandidate, setSelectedCandidate] = useState(null);
+  const [candidateVoters, setCandidateVoters] = useState([]);
+  const [loadingVoters, setLoadingVoters] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const router = useRouter();
 
   const ADMIN_PASSWORD = "Admin3173";
@@ -23,6 +28,35 @@ export default function Results() {
       loadResults();
     }
   }, [isAuthenticated]);
+  
+  // Function to load voters for a specific candidate
+  const loadCandidateVoters = async (candidateId, candidateName) => {
+    try {
+      setLoadingVoters(true);
+      setSelectedCandidate(candidateName);
+      setIsModalOpen(true);
+      
+      const response = await fetch(`/api/votes?action=candidateVoters&candidateId=${candidateId}`);
+      if (!response.ok) {
+        throw new Error('Failed to load candidate voters');
+      }
+      
+      const data = await response.json();
+      setCandidateVoters(data);
+    } catch (error) {
+      console.error('Error loading candidate voters:', error);
+      setCandidateVoters([]);
+    } finally {
+      setLoadingVoters(false);
+    }
+  };
+  
+  // Function to close the modal
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setSelectedCandidate(null);
+    setCandidateVoters([]);
+  };
 
   const handlePasswordSubmit = (e) => {
     e.preventDefault();
@@ -308,12 +342,12 @@ export default function Results() {
     <div className="min-h-screen bg-gradient-to-br from-cyan-50 to-blue-100">
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-800 mb-2">
+        <div className="text-center mb-6 sm:mb-8 px-2">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-800 mb-2">
             Hasil Voting Pegawai Teladan BPS
           </h1>
           <p className="text-gray-600">Total Pemilih: {totalVoters} orang</p>
-          <div className="mt-2 flex justify-center space-x-4 text-sm">
+          <div className="mt-2 flex flex-col sm:flex-row justify-center sm:space-x-4 space-y-1 sm:space-y-0 text-sm">
             <span className="text-green-600">
               ✓ Voting Lengkap: {completeVotes}
             </span>
@@ -325,11 +359,11 @@ export default function Results() {
 
         {/* Top 3 Candidates */}
         {topCandidates.length > 0 && (
-          <div className="max-w-6xl mx-auto mb-8">
-            <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">
+          <div className="max-w-6xl mx-auto mb-6 sm:mb-8 px-2">
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4 sm:mb-6 text-center">
               🏆 Top 3 Kandidat Terbaik
             </h2>
-            <div className="grid md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
               {topCandidates.map((candidate, index) => (
                 <div
                   key={candidate.name}
@@ -342,7 +376,7 @@ export default function Results() {
                   }`}
                 >
                   <div
-                    className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${
+                    className={`w-12 h-12 sm:w-16 sm:h-16 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4 ${
                       index === 0
                         ? "bg-yellow-400 text-white"
                         : index === 1
@@ -350,18 +384,18 @@ export default function Results() {
                         : "bg-orange-400 text-white"
                     }`}
                   >
-                    <span className="text-2xl font-bold">#{index + 1}</span>
+                    <span className="text-xl sm:text-2xl font-bold">#{index + 1}</span>
                   </div>
-                  <h3 className="text-lg font-bold text-gray-800 mb-1">
+                  <h3 className="text-base sm:text-lg font-bold text-gray-800 mb-1">
                     {candidate.name}
                   </h3>
-                  <p className="text-cyan-600 font-medium mb-2">
+                  <p className="text-cyan-600 font-medium mb-2 text-sm sm:text-base">
                     {candidate.district}
                   </p>
-                  <p className="text-2xl font-bold text-gray-800 mb-1">
+                  <p className="text-xl sm:text-2xl font-bold text-gray-800 mb-1">
                     {candidate.averageScore}
                   </p>
-                  <p className="text-sm text-gray-600">
+                  <p className="text-xs sm:text-sm text-gray-600">
                     {candidate.validVotes} pemilih
                   </p>
                 </div>
@@ -373,30 +407,28 @@ export default function Results() {
         {/* Filters and Controls */}
         <div className="max-w-6xl mx-auto mb-6">
           <div className="card">
-            <div className="flex flex-wrap gap-4 items-center justify-between">
-              <div className="flex flex-wrap gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Filter Kecamatan:
-                  </label>
-                  <select
-                    value={filterDistrict}
-                    onChange={(e) => setFilterDistrict(e.target.value)}
-                    className="input-field w-auto"
-                  >
-                    <option value="">Semua Kecamatan</option>
-                    {Object.keys(districts).map((district) => (
-                      <option key={district} value={district}>
-                        {district}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+              <div className="w-full sm:w-auto">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Filter Kecamatan:
+                </label>
+                <select
+                  value={filterDistrict}
+                  onChange={(e) => setFilterDistrict(e.target.value)}
+                  className="input-field w-full sm:w-auto"
+                >
+                  <option value="">Semua Kecamatan</option>
+                  {Object.keys(districts).map((district) => (
+                    <option key={district} value={district}>
+                      {district}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <button
                 onClick={() => router.push("/")}
-                className="btn-secondary"
+                className="btn-secondary w-full sm:w-auto mt-2 sm:mt-0"
               >
                 Kembali ke Beranda
               </button>
@@ -408,7 +440,8 @@ export default function Results() {
         <div className="max-w-6xl mx-auto">
           <div className="card overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full">
+              {/* Desktop Table - Hidden on small screens */}
+              <table className="w-full hidden md:table">
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -494,7 +527,12 @@ export default function Results() {
                           #{index + 1}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                          {candidate.name}
+                          <button 
+                            onClick={() => loadCandidateVoters(candidate.name, candidate.name)}
+                            className="text-blue-600 hover:text-blue-800 hover:underline focus:outline-none"
+                          >
+                            {candidate.name}
+                          </button>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-cyan-600 font-medium">
                           {candidate.district}
@@ -509,7 +547,8 @@ export default function Results() {
                             key={aspect.name}
                             className="px-6 py-4 whitespace-nowrap text-sm text-gray-900"
                           >
-                            {candidate.aspectScores[aspect.name] || "N/A"}
+                            {candidate.aspectScores[aspect.name] === "0" || candidate.aspectScores[aspect.name] === 0 ? 
+                              "abstain" : candidate.aspectScores[aspect.name] || "N/A"}
                           </td>
                         ))}
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -523,6 +562,69 @@ export default function Results() {
                   )}
                 </tbody>
               </table>
+              
+              {/* Mobile Cards - Shown only on small screens */}
+              <div className="md:hidden">
+                {loading ? (
+                  <div className="p-4 text-center text-sm text-gray-500">
+                    Memuat data...
+                  </div>
+                ) : sortedResults.length === 0 ? (
+                  <div className="p-4 text-center text-sm text-gray-500">
+                    Belum ada data hasil voting
+                  </div>
+                ) : (
+                  <div className="divide-y divide-gray-200">
+                    {sortedResults.map((candidate, index) => (
+                      <div 
+                        key={candidate.name} 
+                        className={`p-4 ${index < 3 ? "bg-yellow-50" : ""}`}
+                      >
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="text-sm font-medium text-gray-900">#{index + 1}</span>
+                          <span className="text-xs text-cyan-600 font-medium">{candidate.district}</span>
+                        </div>
+                        <div className="mb-2">
+                          <button 
+                            onClick={() => loadCandidateVoters(candidate.name, candidate.name)}
+                            className="text-blue-600 hover:text-blue-800 hover:underline focus:outline-none text-base font-medium"
+                          >
+                            {candidate.name}
+                          </button>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-sm">
+                          <div>
+                            <span className="text-gray-500">Skor Total:</span>
+                            <span className="ml-1 font-bold">{candidate.averageScore}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-500">Vote Valid:</span>
+                            <span className="ml-1">{candidate.validVotes}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-500">Abstain:</span>
+                            <span className="ml-1 text-orange-600">{candidate.abstainCount}</span>
+                          </div>
+                        </div>
+                        <div className="mt-3 pt-2 border-t border-gray-100">
+                          <p className="text-xs font-medium text-gray-500 mb-1">Detail Aspek:</p>
+                          <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-xs">
+                            {aspects.map((aspect) => (
+                              <div key={aspect.name}>
+                                <span className="text-gray-500">{aspect.name}:</span>
+                                <span className="ml-1">
+                                  {candidate.aspectScores[aspect.name] === "0" || candidate.aspectScores[aspect.name] === 0 ? 
+                                    "abstain" : candidate.aspectScores[aspect.name] || "N/A"}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -553,6 +655,137 @@ export default function Results() {
           </div>
         )}
       </div>
+      
+      {/* Modal for displaying voters */}
+      <Modal isOpen={isModalOpen} onClose={closeModal} title={`Daftar Pemilih untuk ${selectedCandidate || ''}`}>
+        {loadingVoters ? (
+          <div className="flex justify-center items-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+          </div>
+        ) : candidateVoters.length === 0 ? (
+          <div className="text-center py-8 text-gray-500">
+            Tidak ada data pemilih untuk kandidat ini
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            {/* Desktop Table - Hidden on small screens */}
+            <table className="min-w-full divide-y divide-gray-200 hidden md:table">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama Pemilih</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                  {aspects.map((aspect) => (
+                    <th key={aspect.name} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      {aspect.name}
+                    </th>
+                  ))}
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Waktu Vote</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {candidateVoters.map((voter, index) => (
+                  <tr key={index} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{voter.voter_name}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{voter.voter_email}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {voter.is_abstained || (voter.aspect_scores && Object.values(voter.aspect_scores).every(score => score === 0 || score === '0' || score === 'abstain')) ? (
+                        <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">Abstain</span>
+                      ) : (
+                        <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Valid</span>
+                      )}
+                    </td>
+                    {aspects.map((aspect) => {
+                      // Try to match aspect name case-insensitively
+                      const aspectKey = voter.aspect_scores ? 
+                        Object.keys(voter.aspect_scores).find(
+                          key => key.toLowerCase() === aspect.name.toLowerCase()
+                        ) : null;
+                      
+                      let score = 'N/A';
+                      if (aspectKey && voter.aspect_scores) {
+                        score = voter.aspect_scores[aspectKey];
+                        // Jika nilai adalah 0, tampilkan sebagai "abstain"
+                        if (score === 0 || score === '0') {
+                          score = 'abstain';
+                        }
+                      }
+                      
+                      return (
+                        <td key={aspect.name} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {score}
+                        </td>
+                      );
+                    })}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {new Date(voter.updated_at).toLocaleString('id-ID')}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            
+            {/* Mobile Cards - Shown only on small screens */}
+            <div className="md:hidden divide-y divide-gray-200">
+              {candidateVoters.map((voter, index) => {
+                // Determine if voter abstained
+                const isAbstained = voter.is_abstained || 
+                  (voter.aspect_scores && Object.values(voter.aspect_scores).every(
+                    score => score === 0 || score === '0' || score === 'abstain'
+                  ));
+                
+                return (
+                  <div key={index} className="py-4">
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="pr-2">
+                        <div className="text-sm font-medium text-gray-900">{voter.voter_name}</div>
+                        <div className="text-xs text-gray-500 truncate max-w-[200px]">{voter.voter_email}</div>
+                      </div>
+                      <div>
+                        {isAbstained ? (
+                          <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">Abstain</span>
+                        ) : (
+                          <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Valid</span>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-xs">
+                      {aspects.map((aspect) => {
+                        // Try to match aspect name case-insensitively
+                        const aspectKey = voter.aspect_scores ? 
+                          Object.keys(voter.aspect_scores).find(
+                            key => key.toLowerCase() === aspect.name.toLowerCase()
+                          ) : null;
+                        
+                        let score = 'N/A';
+                        if (aspectKey && voter.aspect_scores) {
+                          score = voter.aspect_scores[aspectKey];
+                          // Jika nilai adalah 0, tampilkan sebagai "abstain"
+                          if (score === 0 || score === '0') {
+                            score = 'abstain';
+                          }
+                        }
+                        
+                        return (
+                          <div key={aspect.name}>
+                            <span className="text-gray-500">{aspect.name}:</span>
+                            <span className="ml-1 text-gray-900">{score}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    
+                    <div className="mt-2 text-xs text-gray-500">
+                      Waktu: {new Date(voter.updated_at).toLocaleString('id-ID')}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }
